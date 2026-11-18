@@ -6,6 +6,17 @@ import pytest
 
 from actuarial.commutation import build_commutation
 from actuarial.lifetable import compute_dx, compute_lx, get_qx, load_lifetable
+from actuarial.product import (
+    Expenses,
+    gross_premium,
+    monthly_premium,
+    net_premium,
+    projection,
+    refund_rate,
+    reserve,
+    surrender_value,
+    total_paid,
+)
 
 RAW_PATH = "data/raw/lifetable_2024_lx_qx.csv"
 
@@ -121,3 +132,106 @@ def test_to_frame(table):
     df = build_commutation(get_qx(table, "F"), 0.025).to_frame()
     assert list(df.columns) == ["age", "lx", "dx", "Dx", "Nx", "Cx", "Mx"]
     assert len(df) == 101
+
+
+# --- 상품: 단기납종신 ---
+
+S = 100_000_000  # 가입금액 1억 원
+AGES = [15, 30, 40, 55, 70]
+TERMS = [5, 7, 10]
+ZERO_EXP = Expenses(alpha=0, beta=0, beta_after=0, gamma=0)
+
+
+def _cases():
+    return [(x, m) for x in AGES for m in TERMS]
+
+
+def test_net_premium_reference_value(table):
+    # 2단계에서 확인한 참고값 (i=2.5%, 40세, 10년납, 1억)
+    ct_m = build_commutation(get_qx(table, "M"), 0.025)
+    ct_f = build_commutation(get_qx(table, "F"), 0.025)
+    assert net_premium(ct_m, 40, 10, S) == pytest.approx(4_118_395, abs=1)
+    assert net_premium(ct_f, 40, 10, S) == pytest.approx(3_557_201, abs=1)
+
+
+def test_equivalence_principle(ct):
+    # 수지상등: P·ä_{x:m} = S·A_x
+    for x, m in _cases():
+        P = net_premium(ct, x, m, S)
+        assert P * ct.a_due(x, m) == pytest.approx(S * ct.A(x), rel=1e-12)
+
+
+def test_reserve_zero_at_issue_nonnegative_increasing(ct):
+    for x, m in _cases():
+        k = np.arange(0, ct.omega - x + 1)
+        kV = reserve(ct, x, m, S, k)
+        assert kV[0] == pytest.approx(0.0, abs=1e-6)  # 0V = 0
+        assert np.all(kV >= -1e-6)  # kV ≥ 0
+        assert np.all(np.diff(kV) > 0)  # k에 대해 단조 증가
+
+
+def test_reserve_after_payment_is_single_premium(ct):
+    for x, m in _cases():
+        k = np.arange(m, m + 10)
+        np.testing.assert_allclose(reserve(ct, x, m, S, k), S * ct.A(x + k), rtol=1e-12)
+
+
+def test_gross_equals_net_without_expenses(ct):
+    for x, m in _cases():
+        assert gross_premium(ct, x, m, S, ZERO_EXP) == pytest.approx(net_premium(ct, x, m, S), rel=1e-12)
+
+
+def test_gross_greater_than_net_with_expenses(ct):
+    for exp in (Expenses(), Expenses(0.01, 0, 0, 0), Expenses(0, 0.001, 0, 0),
+                Expenses(0, 0, 0.001, 0), Expenses(0, 0, 0, 0.01)):
+        for x, m in _cases():
+            assert gross_premium(ct, x, m, S, exp) > net_premium(ct, x, m, S)
+
+
+def test_surrender_value_bounds(ct):
+    exp = Expenses()
+    for x, m in _cases():
+        k = np.arange(0, 31)
+        kV = reserve(ct, x, m, S, k)
+        cv = surrender_value(ct, x, m, S, k, exp)
+        assert np.all(cv <= kV + 1e-6)  # CV_k ≤ kV (부동소수 오차 허용)
+        assert np.all(cv >= 0)
+        full = k >= min(m, 7)  # 상각 완료 후 CV_k = kV
+        np.testing.assert_allclose(cv[full], kV[full], rtol=1e-12)
+
+
+def test_monthly_premium_slightly_above_annual_over_12(ct):
+    # ä^(12) < ä 이므로 월납 × 12 > 연납, 차이는 수 % 이내
+    for x, m in _cases():
+        G = gross_premium(ct, x, m, S)
+        mp = monthly_premium(ct, x, m, G)
+        assert G < 12 * mp < 1.05 * G
+
+
+def test_refund_rate(table):
+    ct25 = build_commutation(get_qx(table, "M"), 0.025)
+    G = gross_premium(ct25, 40, 10, S)
+    k = np.arange(0, 31)
+    cv = surrender_value(ct25, 40, 10, S, k)
+    rate = refund_rate(cv, G, 10, k)
+    assert np.isnan(rate[0])  # 낸 보험료가 없으면 정의하지 않음
+    np.testing.assert_allclose(rate[1:], cv[1:] / total_paid(G, 10, k[1:]) * 100, rtol=1e-12)
+
+
+def test_projection_table(table):
+    ct25 = build_commutation(get_qx(table, "F"), 0.025)
+    df = projection(ct25, 40, 10, S)
+    assert list(df["k"]) == list(range(31))
+    assert list(df.columns) == ["k", "age", "reserve", "surrender_value", "total_paid", "refund_rate_pct"]
+    # 70세 가입은 생명표 끝(100세)까지 30년
+    assert len(projection(ct25, 70, 10, S)) == 31
+
+
+def test_invalid_inputs(table):
+    ct25 = build_commutation(get_qx(table, "M"), 0.025)
+    with pytest.raises(ValueError):
+        net_premium(ct25, 95, 10, S)  # 105세까지 납입 불가
+    with pytest.raises(ValueError):
+        reserve(ct25, 80, 10, S, 30)  # 110세는 표 밖
+    with pytest.raises(ValueError):
+        Expenses(gamma=1.0)
