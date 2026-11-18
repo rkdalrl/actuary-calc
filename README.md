@@ -5,8 +5,9 @@
 
 > ⚠️ 학습·포트폴리오용 계산기이며 실제 상품의 보험료와 다를 수 있습니다. 사업비 기본값은 예시이며 실제 상품 값이 아닙니다.
 
-<!-- 스크린샷 자리: 앱 첫 화면 (상단 지표 + 탭 1) -->
+<!-- 스크린샷 자리: 앱 첫 화면 (상단 지표 + 탭 1). docs/screenshots/main.png를 넣은 뒤 아래 줄의 주석을 풀 것
 ![메인 화면](docs/screenshots/main.png)
+-->
 
 ## 주요 기능
 
@@ -29,9 +30,10 @@
 4. **슬라이더로 공식 체험**: 예정이율·가입연령을 움직이면 A_x, ä_x, ä_{x:m}, P와 대입 숫자가 실시간으로 바뀜
 5. **가정 변경 시나리오**: 사망률 배수(남/여, 적용 연령 구간), 예정이율, 사업비를 바꿔 기준 가정과 비교. 예시 버튼 "남성 사망률 전 연령 2배", "예정이율 −1%p", "사업비 0"
 
-<!-- 스크린샷 자리: 학습 모드 (준비금 폭포형 차트, 가정 변경 시나리오) -->
+<!-- 스크린샷 자리: 학습 모드. docs/screenshots/learning_reserve.png, learning_scenario.png를 넣은 뒤 아래 줄의 주석을 풀 것
 ![학습 모드 - 준비금 재귀식](docs/screenshots/learning_reserve.png)
 ![학습 모드 - 가정 변경 시나리오](docs/screenshots/learning_scenario.png)
+-->
 
 ## 데이터
 
@@ -102,7 +104,7 @@ $$\text{환급률}_k = \frac{CV_k}{G \cdot \min(k, m)} \times 100\%$$
 
 ## 실행 방법
 
-Python 3.11 이상이 필요합니다.
+Python 3.11에서 확인했습니다. 패키지 버전은 `requirements.txt`에 고정되어 있습니다.
 
 ```bash
 pip install -r requirements.txt
