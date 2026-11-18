@@ -4,10 +4,10 @@
 > 설계와 공식은 `CLAUDE.md`가 기준이며, 설계를 바꿀 때는 CLAUDE.md도 같이 고치고 로그에 남긴다.
 
 ## 현재 상태
-- 단계: **4-2 / 6 완료** (탭 4 학습 모드까지 화면 완성, 테스트 100개 통과). 다음은 5단계(README)
+- 단계: **5 / 6 완료** (README 작성). 다음은 6단계(GitHub·배포)
 - 다음 담당: Claude Code (사용자 Mac)
 - 폴더: `~/Desktop/就活/3. Actuary_cal` (git 저장소, 원격 없음)
-- 구현된 파일: `actuarial/lifetable.py` (`load_lifetable`, `get_qx`, `compute_lx`, `compute_dx`, `apply_mortality_multiplier(qx, 배수, age_from, age_to)`), `actuarial/commutation.py` (`build_commutation(qx, i)` → `CommutationTable`: 배열 `lx, dx, Dx, Nx, Cx, Mx`(최고연령 뒤 0 패딩 200칸), 메서드 `A(x)`, `a_due(x, n=None)`, `E(x, n)`, `to_frame()`, 속성 `v`, `d`), `actuarial/product.py` (`Expenses(alpha, beta, beta_after, gamma)` 기본값 3%·0.3%·0.1%·2%, `net_premium`, `gross_premium`, `a_due_monthly`, `monthly_premium`, `reserve`, `unamortized_acquisition`, `surrender_value`, `total_paid`, `refund_rate`(%, k=0은 NaN), `projection(ct, x, m, S, exp, years=30)` → DataFrame 열 `k, age, reserve, surrender_value, total_paid, refund_rate_pct`, `reserve_step(ct, x, m, S, k)` → 폭포형 차트용 재귀식 항목, `scenario_results(ct, x, m, S, exp, k=10)` → P·G·10년 준비금·환급률), `app.py`(사이드바 입력, 상단 지표 3칸, 탭 1 준비금·환급금 / 탭 2 민감도 / 탭 3 계산식·기수표 / 탭 4 학습 모드 ①~⑤, 하단 고지. 수식 숫자는 `latex_num()`으로 천 단위 쉼표 처리), `tests/test_actuarial.py`, `requirements.txt`, `pytest.ini`(pythonpath 설정)
+- 구현된 파일: `actuarial/lifetable.py` (`load_lifetable`, `get_qx`, `compute_lx`, `compute_dx`, `apply_mortality_multiplier(qx, 배수, age_from, age_to)`), `actuarial/commutation.py` (`build_commutation(qx, i)` → `CommutationTable`: 배열 `lx, dx, Dx, Nx, Cx, Mx`(최고연령 뒤 0 패딩 200칸), 메서드 `A(x)`, `a_due(x, n=None)`, `E(x, n)`, `to_frame()`, 속성 `v`, `d`), `actuarial/product.py` (`Expenses(alpha, beta, beta_after, gamma)` 기본값 3%·0.3%·0.1%·2%, `net_premium`, `gross_premium`, `a_due_monthly`, `monthly_premium`, `reserve`, `unamortized_acquisition`, `surrender_value`, `total_paid`, `refund_rate`(%, k=0은 NaN), `projection(ct, x, m, S, exp, years=30)` → DataFrame 열 `k, age, reserve, surrender_value, total_paid, refund_rate_pct`, `reserve_step(ct, x, m, S, k)` → 폭포형 차트용 재귀식 항목, `scenario_results(ct, x, m, S, exp, k=10)` → P·G·10년 준비금·환급률), `app.py`(사이드바 입력, 상단 지표 3칸, 탭 1 준비금·환급금 / 탭 2 민감도 / 탭 3 계산식·기수표 / 탭 4 학습 모드 ①~⑤, 하단 고지. 수식 숫자는 `latex_num()`으로 천 단위 쉼표 처리), `README.md`(소개, 기능, 학습 모드, 데이터, 공식, 계산 예시표, 근사의 한계, 실행 방법, 폴더 구조), `docs/screenshots/`(비어 있음), `tests/test_actuarial.py`, `requirements.txt`, `pytest.ini`(pythonpath 설정)
 - 테스트 실행: 폴더에서 `python3 -m pytest -q` (100개 통과)
 - 앱 실행: 폴더에서 `python3 -m streamlit run app.py` (이 Mac은 anaconda python3, streamlit 1.30, plotly 5.9)
 - 미리보기 설정: `~/Desktop/就活/.claude/launch.json`의 `actuary-streamlit` (저장소 밖 파일)
@@ -39,9 +39,10 @@
 - 2026-11-18 (채팅 Claude): 사용자 요청으로 CLAUDE.md에 탭 4 "학습 모드"와 관련 테스트 3개, 구현 순서 4-2 추가. product.py 함수들은 CommutationTable을 입력받으므로, 시나리오는 `build_commutation(변경 qx, i)`로 만든 표를 넘기면 재사용 가능(확인함).
 - 2026-11-18 (Claude Code): 4단계 완료(탭 1~3). `app.py` 작성. 도중에 CLAUDE.md가 바뀌어(탭 4 → 4-2단계 분리) 탭 1~3만 구현. 브라우저에서 세 탭 확인(남 40세 10년납 1억 2.5%: P 4,118,395 / G 5,047,139 참고값 일치, 10년 환급률 90.8% 강조, 공식·기수표·CSV 버튼 정상). 상단 지표 5칸이 잘려 3칸 2줄로 변경, 표의 k=0 환급률이 'None'으로 보여 '-' 문자열로 변경. streamlit AppTest로 성별×연령(15·40·70)×납입(5·7·10)×이율(1·5%) 36조합 오류 없음, 사업비 0이면 G=P 표시 확인. 커밋.
 - 2026-11-18 (Claude Code): 4-2단계 완료. `lifetable.apply_mortality_multiplier`(min(qx×배수,1), 구간 지정, 최고연령 qx=1 유지), `product.reserve_step`·`scenario_results` 추가(기존 함수 재사용, 계산 중복 없음). 테스트 15개 추가(재귀식 납입 중·후, 폭포형 합계, 배수 1.0이면 기준과 정확히 일치, 배수>1이면 P 증가, 연령 구간·입력 검증) → 전체 100개 통과. app.py 탭 4 ①생존곡선(qx 로그축·lx, 남녀) ②수지상등 막대(사업비 토글 시 누적 막대) ③준비금 폭포형 차트(k 슬라이더) ④공식 슬라이더 ⑤가정 변경 시나리오(예시 버튼 3개, 비교표, 겹친 그래프). 브라우저 확인 중 수정: 수식 천 단위 쉼표 공백(`{,}` 처리), 범례 겹침, 폭포형 마지막 막대 라벨 0, 긴 수식 줄바꿈, 사이드바 기준이 바뀌어도 시나리오 값이 옛 기준에 머무는 문제(직접 안 바꾼 값은 기준을 따라가게). AppTest 18조합 오류 없음. 커밋.
+- 2026-11-18 (Claude Code): 5단계 완료. `README.md` 작성(공식은 GitHub 수식 문법 $$, 계산 예시는 남녀 40세·5/7/10년납·2.5%를 코드로 계산한 값). 근사의 한계(해지환급금 근사, 시판 상품보다 10년 환급률이 낮은 이유, 월납 근사, 사업비 예시값, 기타 단순화) 명시. 스크린샷은 자리만 만들고 `docs/screenshots/` 폴더 생성. 테스트 100개 통과. 커밋.
 
 ## 다음 할 일
-1. CLAUDE.md "구현 순서" 5단계: README.md (프로젝트 소개, 공식, 근사의 한계, 실행 방법, 스크린샷 자리)
-   - 근사의 한계에 꼭 넣을 것: 해지환급금 근사(표준해약공제·저해지 구조 미반영), 시판 상품보다 10년 환급률이 낮게 나오는 이유(참고값: 남 40세 10년납 90.8%), 월납 Woolhouse 근사, 사업비 기본값은 예시
-   - 학습 모드 5개 항목 소개도 포함
-2. 6단계: GitHub 저장소 생성·푸시 → Streamlit Community Cloud 배포 안내 (로그인은 사용자가 직접)
+1. **스크린샷 3장 추가 (사용자 또는 Claude)**: README가 `docs/screenshots/main.png`, `learning_reserve.png`, `learning_scenario.png`를 가리키는데 아직 파일이 없음 → GitHub에 올리기 전에 넣어야 README 이미지가 깨지지 않음
+2. CLAUDE.md "구현 순서" 6단계: GitHub 저장소 생성·푸시 → Streamlit Community Cloud 배포 안내 (로그인은 사용자가 직접)
+   - 저장소 폴더명이 `3. Actuary_cal`이라 GitHub 저장소 이름은 따로 정해야 함 (CLAUDE.md 예시는 `actuary-calc`)
+   - `requirements.txt`는 버전 고정 없음. 배포 전 버전 고정 여부 결정 (이 Mac: streamlit 1.30, plotly 5.9, pandas 2.1.4, numpy 1.26.4)
