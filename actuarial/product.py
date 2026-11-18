@@ -141,3 +141,45 @@ def projection(
             "refund_rate_pct": refund_rate(cv, G, m, k),
         }
     )
+
+
+def reserve_step(ct: CommutationTable, x: int, m: int, S: float, k: int) -> dict:
+    """경과 k년째 1년 동안 준비금이 쌓이는 과정 (학습 모드 폭포형 차트용).
+
+    재귀식: ((k−1)V + P)(1+i) = q·S + p·kV   (납입 후에는 P = 0)
+    (k−1)V → + P → + 이자 → − 사망보험금 기대지급 q·S → + 생존자 분배 q·kV → kV
+    """
+    if k < 1:
+        raise ValueError("경과연도 k는 1 이상이어야 합니다")
+    prev_V, V = reserve(ct, x, m, S, [k - 1, k])
+    age = x + k - 1  # 그해 초의 연령
+    q = ct.dx[age] / ct.lx[age]
+    P = net_premium(ct, x, m, S) if k <= m else 0.0  # k년째 초에 보험료를 내는지
+    interest = (prev_V + P) * ct.i
+    death_cost = q * S
+    survivor_share = q * V  # 사망자 몫의 준비금이 생존자에게 넘어감 (p·kV → kV)
+    return {
+        "k": k,
+        "age": age,
+        "q": q,
+        "p": 1.0 - q,
+        "prev_reserve": prev_V,
+        "premium": P,
+        "interest": interest,
+        "death_cost": death_cost,
+        "survivor_share": survivor_share,
+        "reserve": V,
+    }
+
+
+def scenario_results(ct: CommutationTable, x: int, m: int, S: float, exp: Expenses = Expenses(), k: int = 10) -> dict:
+    """가정 변경 시나리오 비교용 핵심 결과. 시나리오는 바뀐 qx·i로 만든 CommutationTable을 넘긴다."""
+    proj = projection(ct, x, m, S, exp)
+    row = proj.loc[proj["k"] == k].iloc[0]
+    return {
+        "net_premium": net_premium(ct, x, m, S),
+        "gross_premium": gross_premium(ct, x, m, S, exp),
+        "reserve_k": float(row["reserve"]),
+        "refund_rate_k": float(row["refund_rate_pct"]),
+        "projection": proj,
+    }

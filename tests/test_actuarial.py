@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from actuarial.commutation import build_commutation
-from actuarial.lifetable import compute_dx, compute_lx, get_qx, load_lifetable
+from actuarial.lifetable import apply_mortality_multiplier, compute_dx, compute_lx, get_qx, load_lifetable
 from actuarial.product import (
     Expenses,
     gross_premium,
@@ -14,6 +14,8 @@ from actuarial.product import (
     projection,
     refund_rate,
     reserve,
+    reserve_step,
+    scenario_results,
     surrender_value,
     total_paid,
 )
@@ -235,3 +237,63 @@ def test_invalid_inputs(table):
         reserve(ct25, 80, 10, S, 30)  # 110세는 표 밖
     with pytest.raises(ValueError):
         Expenses(gamma=1.0)
+
+
+# --- 학습 모드: 준비금 재귀식, 가정 변경 시나리오 ---
+
+
+def test_reserve_recursion(ct):
+    # ((k−1)V + P)(1+i) = q_{x+k−1}·S + p_{x+k−1}·kV, 납입 후에는 P = 0
+    for x, m in _cases():
+        k = np.arange(1, ct.omega - x + 1)
+        V = reserve(ct, x, m, S, np.arange(0, ct.omega - x + 1))
+        age = x + k - 1
+        q = ct.dx[age] / ct.lx[age]
+        P = np.where(k <= m, net_premium(ct, x, m, S), 0.0)
+        lhs = (V[:-1] + P) * (1 + ct.i)
+        rhs = q * S + (1 - q) * V[1:]
+        np.testing.assert_allclose(lhs, rhs, rtol=1e-9, atol=1e-4)
+
+
+def test_reserve_step_waterfall_adds_up(ct):
+    for x, m in _cases():
+        for k in (1, m, m + 1, 25):
+            st_ = reserve_step(ct, x, m, S, k)
+            total = (st_["prev_reserve"] + st_["premium"] + st_["interest"]
+                     - st_["death_cost"] + st_["survivor_share"])
+            assert total == pytest.approx(st_["reserve"], rel=1e-9, abs=1e-4)
+            assert (st_["premium"] > 0) == (k <= m)
+
+
+def test_multiplier_one_matches_base_exactly(table):
+    for sex in ("M", "F"):
+        qx = get_qx(table, sex)
+        assert np.array_equal(apply_mortality_multiplier(qx, 1.0), qx)
+        base = scenario_results(build_commutation(qx, 0.025), 40, 10, S)
+        scen = scenario_results(build_commutation(apply_mortality_multiplier(qx, 1.0, 30, 80), 0.025), 40, 10, S)
+        for key in ("net_premium", "gross_premium", "reserve_k", "refund_rate_k"):
+            assert scen[key] == base[key]
+
+
+def test_multiplier_above_one_raises_net_premium(table):
+    for sex in ("M", "F"):
+        qx = get_qx(table, sex)
+        for mult in (1.1, 2.0, 3.0):
+            q2 = apply_mortality_multiplier(qx, mult)
+            assert q2[-1] == 1.0 and np.all(q2 <= 1.0)
+            for x, m in _cases():
+                base = net_premium(build_commutation(qx, 0.025), x, m, S)
+                assert net_premium(build_commutation(q2, 0.025), x, m, S) > base
+
+
+def test_multiplier_age_range_and_validation(table):
+    qx = get_qx(table, "M")
+    q2 = apply_mortality_multiplier(qx, 2.0, 40, 60)
+    np.testing.assert_array_equal(q2[:40], qx[:40])
+    np.testing.assert_array_equal(q2[61:], qx[61:])
+    np.testing.assert_allclose(q2[40:61], np.minimum(qx[40:61] * 2, 1))
+    assert np.array_equal(get_qx(table, "M"), qx)  # 원본 불변
+    with pytest.raises(ValueError):
+        apply_mortality_multiplier(qx, 0)
+    with pytest.raises(ValueError):
+        apply_mortality_multiplier(qx, 2.0, 60, 40)

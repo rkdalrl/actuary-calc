@@ -52,3 +52,22 @@ def compute_lx(qx: np.ndarray, radix: float = RADIX) -> np.ndarray:
 def compute_dx(qx: np.ndarray, radix: float = RADIX) -> np.ndarray:
     """dx = lx · qx (최고 연령에서는 dx = lx)."""
     return compute_lx(qx, radix) * qx
+
+
+def apply_mortality_multiplier(
+    qx: np.ndarray, multiplier: float, age_from: int = 0, age_to: int | None = None
+) -> np.ndarray:
+    """가정 변경 시나리오용 qx: 연령 구간 [age_from, age_to]에 min(qx × 배수, 1) 적용.
+
+    최고 연령의 qx = 1은 그대로 유지한다. 원본 배열은 바꾸지 않는다.
+    """
+    if multiplier <= 0:
+        raise ValueError(f"사망률 배수는 양수여야 합니다: {multiplier}")
+    omega = len(qx) - 1
+    age_to = omega if age_to is None else age_to
+    if not 0 <= age_from <= age_to <= omega:
+        raise ValueError(f"적용 연령 구간이 올바르지 않습니다: {age_from}~{age_to}")
+    q = np.array(qx, dtype=float)
+    q[age_from : age_to + 1] = np.minimum(q[age_from : age_to + 1] * multiplier, 1.0)
+    q[omega] = 1.0
+    return q
