@@ -49,37 +49,59 @@
 
 ### 기수표
 
-$$D_x = v^x l_x,\quad N_x = \sum_{t \ge x} D_t,\quad C_x = v^{x+1} d_x,\quad M_x = \sum_{t \ge x} C_t$$
+```math
+D_x = v^x l_x,\quad N_x = \sum_{t \ge x} D_t,\quad C_x = v^{x+1} d_x,\quad M_x = \sum_{t \ge x} C_t
+```
 
-$$A_x = \frac{M_x}{D_x},\quad \ddot{a}_{x:\overline{m}|} = \frac{N_x - N_{x+m}}{D_x},\quad \ddot{a}_x = \frac{N_x}{D_x}$$
+```math
+A_x = \frac{M_x}{D_x},\quad \ddot{a}_{x:\overline{m}|} = \frac{N_x - N_{x+m}}{D_x},\quad \ddot{a}_x = \frac{N_x}{D_x}
+```
 
 ### 보험료
 
 순보험료(연납):
 
-$$P = \frac{S \cdot A_x}{\ddot{a}_{x:\overline{m}|}}$$
+```math
+P = \frac{S \cdot A_x}{\ddot{a}_{x:\overline{m}|}}
+```
 
 영업보험료(연납, 수지상등). α 신계약비(가입금액 대비, 1회), β 납입 중 유지비, β' 납입 후 유지비(가입금액 대비, 매년), γ 수금비(영업보험료 대비, 납입 중):
 
-$$G = \frac{S A_x + \alpha S + \beta S\, \ddot{a}_{x:\overline{m}|} + \beta' S\,(\ddot{a}_x - \ddot{a}_{x:\overline{m}|})}{(1-\gamma)\, \ddot{a}_{x:\overline{m}|}}$$
+```math
+G = \frac{S A_x + \alpha S + \beta S\, \ddot{a}_{x:\overline{m}|} + \beta' S\,(\ddot{a}_x - \ddot{a}_{x:\overline{m}|})}{(1-\gamma)\, \ddot{a}_{x:\overline{m}|}}
+```
 
 월납 환산(Woolhouse 2항 근사):
 
-$$\ddot{a}^{(12)}_{x:\overline{m}|} \approx \ddot{a}_{x:\overline{m}|} - \frac{11}{24}\left(1 - {}_mE_x\right),\quad {}_mE_x = \frac{D_{x+m}}{D_x},\quad \text{월납} = \frac{\text{연납} \times \ddot{a}_{x:\overline{m}|} / \ddot{a}^{(12)}_{x:\overline{m}|}}{12}$$
+```math
+\ddot{a}^{(12)}_{x:\overline{m}|} \approx \ddot{a}_{x:\overline{m}|} - \frac{11}{24}\left(1 - {}_mE_x\right),\quad {}_mE_x = \frac{D_{x+m}}{D_x},\quad \text{월납} = \frac{\text{연납} \times \ddot{a}_{x:\overline{m}|} / \ddot{a}^{(12)}_{x:\overline{m}|}}{12}
+```
 
 ### 책임준비금 (순보험료식, 장래법, 경과 k년 말)
 
-$${}_kV = \begin{cases} S\,A_{x+k} - P\,\ddot{a}_{x+k:\overline{m-k}|} & (k < m) \\ S\,A_{x+k} & (k \ge m) \end{cases}$$
+```math
+{}_kV = \begin{cases} S\,A_{x+k} - P\,\ddot{a}_{x+k:\overline{m-k}|} & (k < m) \\ S\,A_{x+k} & (k \ge m) \end{cases}
+```
 
 재귀식(학습 모드 ③), 납입 후에는 $P = 0$:
 
-$$\left({}_{k-1}V + P\right)(1+i) = q_{x+k-1}\,S + p_{x+k-1}\,{}_kV$$
+```math
+\left({}_{k-1}V + P\right)(1+i) = q_{x+k-1}\,S + p_{x+k-1}\,{}_kV
+```
 
 ### 해지환급금(근사)과 환급률
 
-$$\text{미상각 신계약비}_k = \alpha S \cdot \max\left(0,\ 1 - \frac{k}{\min(m, 7)}\right),\qquad CV_k = \max\left(0,\ {}_kV - \text{미상각 신계약비}_k\right)$$
+```math
+\text{미상각 신계약비}_k = \alpha S \cdot \max\left(0,\ 1 - \frac{k}{\min(m, 7)}\right)
+```
 
-$$\text{환급률}_k = \frac{CV_k}{G \cdot \min(k, m)} \times 100\%$$
+```math
+CV_k = \max\left(0,\ {}_kV - \text{미상각 신계약비}_k\right)
+```
+
+```math
+\text{환급률}_k = \frac{CV_k}{G \cdot \min(k, m)} \times 100\%
+```
 
 ## 계산 예시
 
